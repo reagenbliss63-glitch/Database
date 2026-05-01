@@ -3,7 +3,7 @@ import { Heart, MessageCircle, Share2, Image as ImageIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import './index.css';
 
-const API_URL = 'http://13.201.13.56:5000/api';
+const API_URL = 'http://13.201.13.56/api';
 
 function App() {
   const [posts, setPosts] = useState([]);
