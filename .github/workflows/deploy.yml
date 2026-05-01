@@ -33,11 +33,12 @@ jobs:
             npm install
             pm2 restart backend
             
-            # 3. Update the Frontend (React)
+            # 3. Update the Frontend (React - VITE)
             cd ~/Database/frontend
             npm install
             npm run build
-            # Copy the compiled static files to Nginx
-            sudo cp -r build/* /var/www/frontend/
+            # Clear the old files and copy the new Vite 'dist' folder
+            sudo rm -rf /var/www/frontend/*
+            sudo cp -r dist/* /var/www/frontend/
             
             echo "Deployment successful! ✓"
