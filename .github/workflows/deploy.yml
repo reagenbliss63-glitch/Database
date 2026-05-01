@@ -1,6 +1,5 @@
 name: Deploy to EC2
 
-# This tells GitHub to run this script every time you push to the 'main' branch
 on:
   push:
     branches:
@@ -18,27 +17,42 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "Starting deployment..."
+            echo "Deployment Pipeline Triggered..."
             
-            # 1. Pull the latest code from GitHub
+            # 1. Pull the latest code
             cd ~/Database
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             
-            # 2. Update the Backend (Node.js)
+            # 2. Update Backend
             cd backend
-            npm install
-            # Copy the fresh code to the Nginx serving directory and restart PM2
+            npm install --production
             sudo rsync -av --exclude 'node_modules' ./ /var/www/backend/
             cd /var/www/backend
-            npm install
-            pm2 restart backend
+            npm install --production
+            pm2 restart backend || pm2 start index.js --name backend
             
-            # 3. Update the Frontend (React - VITE)
+            # 3. Update Frontend
             cd ~/Database/frontend
             npm install
             npm run build
-            # Clear the old files and copy the new Vite 'dist' folder
-            sudo rm -rf /var/www/frontend/*
-            sudo cp -r build/* /var/www/frontend/
             
-            echo "Deployment successful! ✓"
+            # Verify build folder exists
+            if [ -d "build" ]; then
+                echo "Build successful. Copying files..."
+                sudo rm -rf /var/www/frontend/*
+                sudo cp -r build/* /var/www/frontend/
+                echo "Frontend Updated! ✓"
+            else
+                echo "ERROR: Build folder not found! Checking for dist..."
+                if [ -d "dist" ]; then
+                    sudo rm -rf /var/www/frontend/*
+                    sudo cp -r dist/* /var/www/frontend/
+                    echo "Frontend Updated (using dist)! ✓"
+                else
+                    echo "CRITICAL ERROR: No build or dist folder found."
+                    exit 1
+                fi
+            fi
+            
+            echo "Deployment finished successfully! 🚀"
