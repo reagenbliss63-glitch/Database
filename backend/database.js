@@ -40,6 +40,19 @@ async function setupDatabase() {
       );
     `);
 
+    // Create comments table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        postId INT,
+        userId INT,
+        content TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(postId) REFERENCES posts(id) ON DELETE CASCADE,
+        FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+
     // Check if users exist and seed
     const [rows] = await pool.query('SELECT COUNT(*) as count FROM users');
     if (rows[0].count === 0) {

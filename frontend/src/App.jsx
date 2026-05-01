@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, Image as ImageIcon } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Image as ImageIcon, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import './index.css';
 
@@ -9,6 +9,8 @@ function App() {
   const [posts, setPosts] = useState([]);
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
+  const [expandedComments, setExpandedComments] = useState({});
+  const [commentInputs, setCommentInputs] = useState({});
 
   useEffect(() => {
     fetchPosts();
@@ -54,6 +56,35 @@ function App() {
       }
     } catch (error) {
       console.error("Error liking post:", error);
+    }
+  };
+
+  const toggleComments = (postId) => {
+    setExpandedComments(prev => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const handleCommentSubmit = async (postId) => {
+    const commentText = commentInputs[postId];
+    if (!commentText || !commentText.trim()) return;
+
+    try {
+      const res = await fetch(`${API_URL}/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: commentText })
+      });
+      if(res.ok) {
+        const newComment = await res.json();
+        setPosts(posts.map(post => {
+          if (post.id === postId) {
+            return { ...post, comments: [...(post.comments || []), newComment] };
+          }
+          return post;
+        }));
+        setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      }
+    } catch (error) {
+      console.error("Error creating comment:", error);
     }
   };
 
@@ -121,15 +152,56 @@ function App() {
                   <Heart size={20} />
                   {post.likes}
                 </button>
-                <button className="action-btn">
+                <button className="action-btn" onClick={() => toggleComments(post.id)}>
                   <MessageCircle size={20} />
-                  Comment
+                  {post.comments?.length || 0} Comments
                 </button>
                 <button className="action-btn">
                   <Share2 size={20} />
                   Share
                 </button>
               </div>
+
+              {/* COMMENTS SECTION */}
+              {expandedComments[post.id] && (
+                <div className="comments-section">
+                  {post.comments?.map(comment => (
+                    <div key={comment.id} className="comment">
+                      <img src={comment.userAvatar} alt={comment.userName} className="avatar avatar-sm" />
+                      <div className="comment-content">
+                        <div className="comment-author">
+                          <span>{comment.userName}</span>
+                          <span className="comment-time">
+                            {formatDistanceToNow(new Date(comment.createdAt))} ago
+                          </span>
+                        </div>
+                        <div>{comment.content}</div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="add-comment">
+                    <img src="https://i.pravatar.cc/150?u=admin" alt="Admin" className="avatar avatar-sm" />
+                    <div className="comment-input-wrap">
+                      <input 
+                        type="text"
+                        className="comment-input"
+                        placeholder="Write a comment..."
+                        value={commentInputs[post.id] || ''}
+                        onChange={(e) => setCommentInputs(prev => ({...prev, [post.id]: e.target.value}))}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCommentSubmit(post.id)}
+                      />
+                      <button 
+                        className="comment-submit-btn"
+                        disabled={!commentInputs[post.id]?.trim()}
+                        onClick={() => handleCommentSubmit(post.id)}
+                      >
+                        <Send size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {posts.length === 0 && (

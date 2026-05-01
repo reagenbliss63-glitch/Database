@@ -22,7 +22,22 @@ app.get('/api/posts', async (req, res) => {
       JOIN users ON posts.userId = users.id 
       ORDER BY createdAt DESC
     `);
-    res.json(posts);
+    
+    // Fetch comments for all posts
+    const [comments] = await pool.query(`
+      SELECT comments.*, users.name as userName, users.avatar as userAvatar, users.username 
+      FROM comments 
+      JOIN users ON comments.userId = users.id 
+      ORDER BY createdAt ASC
+    `);
+
+    // Group comments by post
+    const postsWithComments = posts.map(post => {
+      post.comments = comments.filter(c => c.postId === post.id);
+      return post;
+    });
+
+    res.json(postsWithComments);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -41,6 +56,7 @@ app.post('/api/posts', async (req, res) => {
       FROM posts JOIN users ON posts.userId = users.id 
       WHERE posts.id = ?`, [result.insertId]);
       
+    newPost[0].comments = [];
     res.status(201).json(newPost[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -56,6 +72,28 @@ app.post('/api/posts/:id/like', async (req, res) => {
     } else {
       res.status(404).json({ error: 'Post not found' });
     }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/posts/:id/comments', async (req, res) => {
+  try {
+    const { content } = req.body;
+    const postId = req.params.id;
+    const userId = 1; // Default to admin user for demo
+
+    const [result] = await pool.query(
+      'INSERT INTO comments (postId, userId, content) VALUES (?, ?, ?)',
+      [postId, userId, content]
+    );
+    
+    const [newComment] = await pool.query(`
+      SELECT comments.*, users.name as userName, users.avatar as userAvatar, users.username 
+      FROM comments JOIN users ON comments.userId = users.id 
+      WHERE comments.id = ?`, [result.insertId]);
+      
+    res.status(201).json(newComment[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
