@@ -106,18 +106,18 @@ function App() {
             onChange={(e) => setContent(e.target.value)}
           />
           {image && (
-            <img src={image} alt="Preview" className="post-image" style={{maxHeight: 200, marginBottom: '1rem'}} />
+            <img src={image} alt="Preview" className="post-image" style={{maxHeight: 200, marginBottom: '1rem', display: 'block', borderRadius: '12px'}} />
           )}
           <div className="post-actions">
             <button 
               className="action-btn"
-              style={{ flex: 0 }}
+              style={{ flex: 0, paddingLeft: 0 }}
               onClick={() => {
                 const url = prompt("Enter image URL (optional):");
                 if (url) setImage(url);
               }}
             >
-              <ImageIcon size={20} /> Photo
+              <ImageIcon size={20} /> <span style={{marginLeft: '8px'}}>Photo</span>
             </button>
             <button className="btn" onClick={handlePost}>Post</button>
           </div>
@@ -131,7 +131,7 @@ function App() {
                 <div className="user-info">
                   <span className="user-name">{post.userName}</span>
                   <span className="user-handle">
-                    @{post.username} • {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                    @{post.username} • {post.createdAt ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) : 'just now'}
                   </span>
                 </div>
               </div>
@@ -150,19 +150,18 @@ function App() {
                   onClick={() => handleLike(post.id)}
                 >
                   <Heart size={20} />
-                  {post.likes}
+                  <span>{post.likes}</span>
                 </button>
                 <button className="action-btn" onClick={() => toggleComments(post.id)}>
                   <MessageCircle size={20} />
-                  {post.comments?.length || 0} Comments
+                  <span>{post.comments?.length || 0} Comments</span>
                 </button>
                 <button className="action-btn">
                   <Share2 size={20} />
-                  Share
+                  <span>Share</span>
                 </button>
               </div>
 
-              {/* COMMENTS SECTION */}
               {expandedComments[post.id] && (
                 <div className="comments-section">
                   {post.comments?.map(comment => (
@@ -172,7 +171,7 @@ function App() {
                         <div className="comment-author">
                           <span>{comment.userName}</span>
                           <span className="comment-time">
-                            {formatDistanceToNow(new Date(comment.createdAt))} ago
+                            {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt)) : 'just now'} ago
                           </span>
                         </div>
                         <div>{comment.content}</div>
