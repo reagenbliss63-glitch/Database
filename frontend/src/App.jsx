@@ -1,217 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, Image as ImageIcon, Send } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import './index.css';
+import { useState, useEffect } from 'react'
+import './App.css'
 
 const API_URL = 'http://13.201.13.56/api';
 
 function App() {
   const [posts, setPosts] = useState([]);
-  const [content, setContent] = useState('');
-  const [image, setImage] = useState('');
-  const [expandedComments, setExpandedComments] = useState({});
-  const [commentInputs, setCommentInputs] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPosts();
+    fetch(`${API_URL}/posts`)
+      .then(res => res.json())
+      .then(data => {
+        setPosts(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching posts:", err);
+        setLoading(false);
+      });
   }, []);
 
-  const fetchPosts = async () => {
-    try {
-      const res = await fetch(`${API_URL}/posts`);
-      if(res.ok) {
-        const data = await res.json();
-        setPosts(data);
-      }
-    } catch (error) {
-      console.error("Error fetching posts:", error);
-    }
-  };
-
-  const handlePost = async () => {
-    if (!content.trim()) return;
-    try {
-      const res = await fetch(`${API_URL}/posts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, image })
-      });
-      if(res.ok) {
-        const newPost = await res.json();
-        setPosts([newPost, ...posts]);
-        setContent('');
-        setImage('');
-      }
-    } catch (error) {
-      console.error("Error creating post:", error);
-    }
-  };
-
-  const handleLike = async (id) => {
-    try {
-      const res = await fetch(`${API_URL}/posts/${id}/like`, { method: 'POST' });
-      if(res.ok) {
-        const { likes } = await res.json();
-        setPosts(posts.map(post => post.id === id ? { ...post, likes } : post));
-      }
-    } catch (error) {
-      console.error("Error liking post:", error);
-    }
-  };
-
-  const toggleComments = (postId) => {
-    setExpandedComments(prev => ({ ...prev, [postId]: !prev[postId] }));
-  };
-
-  const handleCommentSubmit = async (postId) => {
-    const commentText = commentInputs[postId];
-    if (!commentText || !commentText.trim()) return;
-
-    try {
-      const res = await fetch(`${API_URL}/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: commentText })
-      });
-      if(res.ok) {
-        const newComment = await res.json();
-        setPosts(posts.map(post => {
-          if (post.id === postId) {
-            return { ...post, comments: [...(post.comments || []), newComment] };
-          }
-          return post;
-        }));
-        setCommentInputs(prev => ({ ...prev, [postId]: '' }));
-      }
-    } catch (error) {
-      console.error("Error creating comment:", error);
-    }
-  };
-
   return (
-    <div className="app-container">
-      <header className="header">
-        <div className="logo">Nova Connect</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img src="https://i.pravatar.cc/150?u=admin" alt="Profile" className="avatar" style={{width: 36, height: 36}}/>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1 style={{ color: '#1877F2', borderBottom: '2px solid #1877F2', paddingBottom: '10px' }}>
+        My Social Feed
+      </h1>
+      
+      {loading ? (
+        <p>Loading your feed from EC2...</p>
+      ) : posts.length === 0 ? (
+        <div style={{ background: '#f0f2f5', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+          <p>No posts found in the RDS Database yet!</p>
         </div>
-      </header>
-
-      <main>
-        <div className="create-post">
-          <textarea 
-            className="post-input" 
-            placeholder="What's on your mind, Admin?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-          />
-          {image && (
-            <img src={image} alt="Preview" className="post-image" style={{maxHeight: 200, marginBottom: '1rem', display: 'block', borderRadius: '12px'}} />
-          )}
-          <div className="post-actions">
-            <button 
-              className="action-btn"
-              style={{ flex: 0, paddingLeft: 0 }}
-              onClick={() => {
-                const url = prompt("Enter image URL (optional):");
-                if (url) setImage(url);
-              }}
-            >
-              <ImageIcon size={20} /> <span style={{marginLeft: '8px'}}>Photo</span>
-            </button>
-            <button className="btn" onClick={handlePost}>Post</button>
+      ) : (
+        posts.map((post, index) => (
+          <div key={index} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>User #{post.user_id || 'Anonymous'}</h3>
+            <p style={{ margin: 0, fontSize: '14px' }}>{post.content || post.text || "Hello world from the database!"}</p>
           </div>
-        </div>
-
-        <div className="post-list">
-          {posts.map(post => (
-            <div key={post.id} className="post-card">
-              <div className="post-header">
-                <img src={post.userAvatar} alt={post.userName} className="avatar" />
-                <div className="user-info">
-                  <span className="user-name">{post.userName}</span>
-                  <span className="user-handle">
-                    @{post.username} • {post.createdAt ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) : 'just now'}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="post-content">
-                {post.content}
-              </div>
-
-              {post.image && (
-                <img src={post.image} alt="Post attachment" className="post-image" />
-              )}
-
-              <div className="post-footer">
-                <button 
-                  className={`action-btn ${post.likes > 0 ? 'liked' : ''}`} 
-                  onClick={() => handleLike(post.id)}
-                >
-                  <Heart size={20} />
-                  <span>{post.likes}</span>
-                </button>
-                <button className="action-btn" onClick={() => toggleComments(post.id)}>
-                  <MessageCircle size={20} />
-                  <span>{post.comments?.length || 0} Comments</span>
-                </button>
-                <button className="action-btn">
-                  <Share2 size={20} />
-                  <span>Share</span>
-                </button>
-              </div>
-
-              {expandedComments[post.id] && (
-                <div className="comments-section">
-                  {post.comments?.map(comment => (
-                    <div key={comment.id} className="comment">
-                      <img src={comment.userAvatar} alt={comment.userName} className="avatar avatar-sm" />
-                      <div className="comment-content">
-                        <div className="comment-author">
-                          <span>{comment.userName}</span>
-                          <span className="comment-time">
-                            {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt)) : 'just now'} ago
-                          </span>
-                        </div>
-                        <div>{comment.content}</div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="add-comment">
-                    <img src="https://i.pravatar.cc/150?u=admin" alt="Admin" className="avatar avatar-sm" />
-                    <div className="comment-input-wrap">
-                      <input 
-                        type="text"
-                        className="comment-input"
-                        placeholder="Write a comment..."
-                        value={commentInputs[post.id] || ''}
-                        onChange={(e) => setCommentInputs(prev => ({...prev, [post.id]: e.target.value}))}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCommentSubmit(post.id)}
-                      />
-                      <button 
-                        className="comment-submit-btn"
-                        disabled={!commentInputs[post.id]?.trim()}
-                        onClick={() => handleCommentSubmit(post.id)}
-                      >
-                        <Send size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-          {posts.length === 0 && (
-            <div style={{textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem'}}>
-              No posts yet. Be the first to share something!
-            </div>
-          )}
-        </div>
-      </main>
+        ))
+      )}
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
