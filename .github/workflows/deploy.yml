@@ -39,6 +39,6 @@ jobs:
             npm run build
             # Clear the old files and copy the new Vite 'dist' folder
             sudo rm -rf /var/www/frontend/*
-            sudo cp -r dist/* /var/www/frontend/
+            sudo cp -r build/* /var/www/frontend/
             
             echo "Deployment successful! ✓"
